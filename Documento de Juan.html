@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<!-- saved from url=(0050)file:///C:/Users/juank/OneDrive/Desktop/index.html -->
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torneo en Vivo</title>
+
+<style>
+body{
+font-family:system-ui;
+background:linear-gradient(135deg,#0b1220,#111c33);
+color:white;
+margin:0;
+padding:12px;
+}
+
+h2{text-align:center;}
+
+.card{
+background:#1e293b;
+padding:12px;
+margin:10px 0;
+border-radius:14px;
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:10px;
+border:none;
+font-size:14px;
+}
+
+button{
+background:#22c55e;
+font-weight:bold;
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:13px;
+}
+
+th,td{
+border:1px solid #444;
+text-align:center;
+padding:6px;
+}
+</style>
+</head>
+
+<body>
+
+<h2 id="title">🏆 TORNEO EN VIVO</h2>
+
+<!-- FIREBASE -->
+<script src="./Torneo en Vivo_files/firebase-app-compat.js.descarga"></script>
+<script src="./Torneo en Vivo_files/firebase-database-compat.js.descarga"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAc9hWNKn8sJzCJIG_LvASq-IT-n1L7RI8",
+  authDomain: "torneo-vivo.firebaseapp.com",
+  databaseURL: "https://torneo-vivo-default-rtdb.firebaseio.com",
+  projectId: "torneo-vivo",
+  storageBucket: "torneo-vivo.firebasestorage.app",
+  messagingSenderId: "1091217094225",
+  appId: "1:1091217094225:web:b4183e96ff2ed608d3aa70"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<!-- NOMBRE -->
+<div class="card">
+<h3>✏️ Nombre torneo</h3>
+<input id="tname">
+<button onclick="setName()">Cambiar nombre</button>
+</div>
+
+<!-- RESET -->
+<div class="card">
+<h3>🔁 Reiniciar</h3>
+<button onclick="resetTournament()" style="background:red;">Reset</button>
+</div>
+
+<!-- EQUIPOS -->
+<div class="card">
+<h3>➕ Equipos</h3>
+<input id="team">
+<button onclick="addTeam()">Agregar</button>
+</div>
+
+<!-- PARTIDOS -->
+<div class="card">
+<h3>⚽ Partido</h3>
+
+<select id="a"></select>
+<select id="b"></select>
+
+<input id="g1" type="number" placeholder="Goles local">
+<input id="g2" type="number" placeholder="Goles visitante">
+
+<button onclick="addMatch()">Guardar</button>
+</div>
+
+<!-- JUGADORES -->
+<div class="card">
+<h3>👤 Jugadores</h3>
+
+<select id="teamPlayer"></select>
+<input id="player">
+
+<button onclick="addPlayer()">Agregar jugador</button>
+
+<select id="playerSelect"></select>
+<button onclick="goal()">+1 Gol</button>
+</div>
+
+<!-- TARJETAS -->
+<div class="card">
+<h3>🃏 Tarjetas</h3>
+
+<select id="cardTeam"></select>
+<input id="cardPlayer">
+
+<select id="cardType">
+<option value="yellow">Amarilla</option>
+<option value="blue">Azul</option>
+<option value="red">Roja</option>
+</select>
+
+<button onclick="addCard()">Dar tarjeta</button>
+</div>
+
+<!-- TABLA -->
+<div class="card">
+<h3>📊 Tabla posiciones</h3>
+<table>
+<tbody><tr>
+<th>Equipo</th><th>PJ</th><th>PTS</th><th>GF</th><th>GC</th><th>DG</th>
+</tr>
+</tbody><tbody id="table"></tbody>
+</table>
+</div>
+
+<!-- GOLEADORES -->
+<div class="card">
+<h3>🥇 Goleadores</h3>
+<ol id="top"></ol>
+</div>
+
+<!-- FIFA -->
+<div class="card">
+<h3>📊 FIFA Stats</h3>
+<ol id="fifa"></ol>
+</div>
+
+<script>
+
+let teams = {};
+
+/* ================= FIREBASE LIVE ================= */
+
+db.ref("torneo").on("value", (snap)=>{
+teams = snap.val() || {};
+render();
+});
+
+/* ================= SAVE ================= */
+
+function save(){
+db.ref("torneo").set(teams);
+}
+
+/* ================= RESET ================= */
+
+function resetTournament(){
+if(!confirm("Seguro?")) return;
+db.ref("torneo").remove();
+}
+
+/* ================= NAME ================= */
+
+function setName(){
+let n=document.getElementById("tname").value;
+if(!n) return;
+document.getElementById("title").innerText="🏆 "+n;
+}
+
+/* ================= TEAMS ================= */
+
+function addTeam(){
+let n=document.getElementById("team").value;
+if(!n) return;
+
+teams[n]={pj:0,pts:0,gf:0,gc:0,players:{}};
+save();
+}
+
+/* ================= PLAYERS ================= */
+
+function addPlayer(){
+let t=document.getElementById("teamPlayer").value;
+let p=document.getElementById("player").value;
+if(!teams[t]||!p) return;
+
+teams[t].players[p]={goals:0,cards:{yellow:0,blue:0,red:0}};
+save();
+}
+
+/* ================= GOALS ================= */
+
+function goal(){
+let p=document.getElementById("playerSelect").value;
+
+for(let t in teams){
+if(teams[t].players[p]){
+teams[t].players[p].goals++;
+break;
+}
+}
+save();
+}
+
+/* ================= MATCH ================= */
+
+function addMatch(){
+
+let a=document.getElementById("a").value;
+let b=document.getElementById("b").value;
+
+let g1=Number(document.getElementById("g1").value||0);
+let g2=Number(document.getElementById("g2").value||0);
+
+if(!teams[a]||!teams[b]||a===b) return;
+
+teams[a].pj++;
+teams[b].pj++;
+
+teams[a].gf=(teams[a].gf||0)+g1;
+teams[a].gc=(teams[a].gc||0)+g2;
+
+teams[b].gf=(teams[b].gf||0)+g2;
+teams[b].gc=(teams[b].gc||0)+g1;
+
+if(g1>g2) teams[a].pts+=3;
+else if(g2>g1) teams[b].pts+=3;
+else{teams[a].pts++;teams[b].pts++;}
+
+save();
+}
+
+/* ================= CARDS ================= */
+
+function addCard(){
+let t=document.getElementById("cardTeam").value;
+let p=document.getElementById("cardPlayer").value;
+let type=document.getElementById("cardType").value;
+
+if(!teams[t]||!teams[t].players[p]) return;
+
+teams[t].players[p].cards[type]++;
+save();
+}
+
+/* ================= RENDER ================= */
+
+function render(){
+
+let list=Object.keys(teams);
+
+// selects
+["a","b","teamPlayer","cardTeam"].forEach(id=>{
+let el=document.getElementById(id);
+el.innerHTML="";
+list.forEach(t=>{
+el.innerHTML+=`<option>${t}</option>`;
+});
+});
+
+// players
+let ps=document.getElementById("playerSelect");
+ps.innerHTML="";
+for(let t in teams){
+for(let p in teams[t].players){
+ps.innerHTML+=`<option>${p}</option>`;
+}
+}
+
+// TABLE
+let sorted=Object.entries(teams)
+.sort((a,b)=>(b[1].pts||0)-(a[1].pts||0));
+
+document.getElementById("table").innerHTML=
+sorted.map(([t,x])=>
+`<tr>
+<td>${t}</td>
+<td>${x.pj||0}</td>
+<td>${x.pts||0}</td>
+<td>${x.gf||0}</td>
+<td>${x.gc||0}</td>
+<td>${(x.gf||0)-(x.gc||0)}</td>
+</tr>`
+).join("");
+
+// GOLEADORES
+let goals=[];
+
+for(let t in teams){
+for(let p in teams[t].players){
+let g=teams[t].players[p].goals;
+if(g>0) goals.push({p,t,g});
+}
+}
+
+goals.sort((a,b)=>b.g-a.g);
+
+document.getElementById("top").innerHTML=
+goals.slice(0,3).map((x,i)=>
+`<li>${["🥇","🥈","🥉"][i]} ${x.p} (${x.t}) - ${x.g}</li>`
+).join("");
+
+// FIFA
+let fifa=[];
+
+for(let t in teams){
+for(let p in teams[t].players){
+let pl=teams[t].players[p];
+let d=(pl.cards.yellow||0)+(pl.cards.blue||0)*2+(pl.cards.red||0)*3;
+let rating=Math.max(0,100 - d*5 + (pl.goals||0)*2);
+
+fifa.push({p,t,rating});
+}
+}
+
+fifa.sort((a,b)=>b.rating-a.rating);
+
+document.getElementById("fifa").innerHTML=
+fifa.map(x=>`<li>${x.p} (${x.t}) ⭐ ${x.rating}</li>`).join("");
+
+}
+
+</script>
+
+
+</body></html>
